@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌍 世界愿望留言板 | Global Wish Board</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* 背景渐变色块 */
+    .bg-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 头部区域 - 深色色块 */
+    .header-section {
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 60px 0;
+      text-align: center;
+    }
+    .header-title {
+      font-size: 3.5rem;
+      margin-bottom: 15px;
+      letter-spacing: 2px;
+    }
+    .header-subtitle {
+      font-size: 1.3rem;
+      opacity: 0.9;
+    }
+
+    /* 发布区域 - 浅色色块 */
+    .post-section {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 60px 80px;
+      margin: 40px 40px;
+      border-radius: 15px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .post-title {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .post-textarea {
+      width: 100%;
+      height: 150px;
+      padding: 20px;
+      font-size: 1.1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      resize: vertical;
+      font-family: inherit;
+      margin-bottom: 20px;
+    }
+    .post-button {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    .post-button:hover {
+      transform: translateY(-2px);
+    }
+
+    /* 排行榜区域 - 半透明色块 */
+    .top-section {
+      background: rgba(255, 255, 255, 0.85);
+      padding: 50px 80px;
+      margin: 40px 40px;
+      border-radius: 15px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .top-title {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .top-item {
+      background: rgba(102, 126, 234, 0.1);
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      border-left: 5px solid #667eea;
+    }
+    .top-rank {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+      display: inline-block;
+      width: 40px;
+    }
+    .top-content {
+      font-size: 1.1rem;
+      color: #333;
+      margin-left: 10px;
+    }
+    .top-user {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    /* 留言列表区域 - 白色色块 */
+    .list-section {
+      background: white;
+      padding: 50px 80px;
+      margin: 40px 40px;
+      border-radius: 15px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .list-title {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .sort-controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .sort-select {
+      padding: 12px 20px;
+      font-size: 1.1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+    }
+    .message-item {
+      background: #f8f9fa;
+      padding: 25px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      border: 1px solid #e9ecef;
+    }
+    .message-user {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    .message-content {
+      font-size: 1.1rem;
+      color: #333;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+    .message-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #666;
+    }
+    .like-button {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .like-count {
+      font-weight: bold;
+      color: #dc3545;
+    }
+
+    /* 分页区域 - 浅灰色色块 */
+    .pagination-section {
+      background: rgba(248, 249, 250, 0.9);
+      padding: 30px 80px;
+      margin: 40px 40px;
+      text-align: center;
+    }
+    .pagination {
+      display: inline-flex;
+      gap: 10px;
+    }
+    .page-btn {
+      padding: 12px 18px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .page-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    /* 站长信息 - 底部深色色块 */
+    .admin-section {
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 40px 80px;
+      text-align: center;
+    }
+    .admin-title {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #667eea;
+    }
+    .admin-contact {
+      font-size: 1.1rem;
+      line-height: 2;
+    }
+    .admin-link {
+      color: #667eea;
+      text-decoration: none;
+      margin: 0 15px;
+    }
+    .admin-link:hover {
+      text-decoration: underline;
+    }
+
+    /* 响应式调整（PC端为主，但保留基本适配） */
+    @media (max-width: 1200px) {
+      .post-section, .top-section, .list-section, .pagination-section, .admin-section {
+        margin: 20px 20px;
+        padding: 40px;
+      }
+      .header-title { font-size: 2.8rem; }
+      .post-title, .top-title, .list-title { font-size: 1.8rem; }
+    }
+
+    @media (max-width: 768px) {
+      .post-section, .top-section, .list-section, .pagination-section, .admin-section {
+        padding: 30px 20px;
+        margin: 10px 10px;
+      }
+      .header-title { font-size: 2.2rem; }
+      .post-textarea { height: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient">
+    <!-- 头部区域 -->
+    <div class="header-section">
+      <h1 class="header-title">🌍 世界愿望留言板</h1>
+      <p class="header-subtitle">Global Wish Board | 与全世界分享你的愿望</p>
+    </div>
+
+    <!-- 发布区域 -->
+    <div class="post-section">
+      <h2 class="post-title">✨ 发布你的愿望 | Post Your Wish</h2>
+      <textarea id="content" class="post-textarea" placeholder="例如：希望世界和平 | E.g., I hope to travel to Japan someday..."></textarea>
+      <button onclick="postMessage()" class="post-button">📝 发布愿望 | Post Wish</button>
+    </div>
+
+    <!-- 排行榜区域 -->
+    <div class="top-section">
+      <h2 class="top-title">🏆 点赞排行榜 | Top 10 Most Liked Wishes</h2>
+      <div id="topLiked"></div>
+    </div>
+
+    <!-- 留言列表区域 -->
+    <div class="list-section">
+      <h2 class="list-title">📜 所有愿望 | All Wishes (Latest 1000)</h2>
+      <div class="sort-controls">
+        <label>
+          排序方式 | Sort by:
+          <select id="sortSelect" class="sort-select" onchange="changeSort()">
+            <option value="time">时间倒序 | Time (Newest First)</option>
+            <option value="likes">点赞数 | Likes (Highest First)</option>
+          </select>
+        </label>
+      </div>
+      <div id="messageList"></div>
+    </div>
+
+    <!-- 分页区域 -->
+    <div class="pagination-section">
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- 站长信息区域 -->
+    <div class="admin-section">
+      <h3 class="admin-title">👨‍💻 站长信息 | Admin Info</h3>
+      <div class="admin-contact">
+        <div>站长：Awey</div>
+        <div>
+          <a href="https://www.tiktok.com/@Awey.L" class="admin-link" target="_blank">📱 TikTok: Awey.L</a>
+          <a href="mailto:lzzzv@outlook.com" class="admin-link">✉️ Email: lzzzv@outlook.com</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === Supabase Config ===
+    const SUPABASE_URL = 'https://kkbbmzyvfnxttmnikuvl.supabase.com';        // ← 必须替换！
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrYmJtenl2Zm54dHRtbmlrdXZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NzYyMjAsImV4cCI6MjA3ODA1MjIyMH0._0EMcRXbang2rlhMSF-MtPWOYHOZBbVOLLR-lVRZj1Y'; // ← 必须替换！
+
+    if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
+      alert('❌ 请先配置 Supabase URL 和 anon key！');
+      throw new Error('Supabase 配置未设置');
+    }
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 名字池
+    const namePool = [
+      "Luna", "Kai", "Ming", "Aria", "Leo", "Yuki", "Ethan", "Mei",
+      "Noah", "Sakura", "Jay", "Lin", "Emma", "Hiro", "Zoe", "Wei",
+      "张三", "李四", "王五", "赵六", "陈七", "刘八", "孙九", "周十",
+      "吴一", "郑二", "冯三", "朱四", "秦五", "何六", "郭七", "马八"
+    ];
+
+    let allMessages = [];
+    let currentSort = 'time';
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 100;
+    const TOTAL_ITEMS = 1000;
+
+    function getUsedNames(messages) {
+      return new Set(messages.map(m => m.name));
+    }
+
+    function generateUniqueName(usedNames) {
+      const available = namePool.filter(name => !usedNames.has(name));
+      if (available.length > 0) {
+        return available[Math.floor(Math.random() * available.length)];
+      }
+      return namePool[Math.floor(Math.random() * namePool.length)] + Math.floor(Math.random() * 100);
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+    }
+
+    async function postMessage() {
+      const content = document.getElementById('content').value.trim();
+      if (!content) {
+        alert('请输入你的愿望！| Please enter your wish!');
+        return;
+      }
+
+      const usedNames = getUsedNames(allMessages);
+      const name = generateUniqueName(usedNames);
+      const address = "Earth";
+      const ip = "0.0.0.0";
+
+      try {
+        const { error } = await supabase.from('messages').insert({
+          content,
+          name,
+          address,
+          ip,
+          likes: 0
+        });
+
+        if (error) throw error;
+
+        document.getElementById('content').value = '';
+        await loadAllData();
+        currentPage = 1;
+        renderPage(currentPage);
+        renderPagination();
+      } catch (e) {
+        console.error('Post error:', e);
+        alert('发布失败，请重试！| Failed to post. Please try again.');
+      }
+    }
+
+    async function like(id) {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('likes')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+
+        await supabase
+          .from('messages')
+          .update({ likes: data.likes + 1 })
+          .eq('id', id);
+
+        await loadAllData();
+      } catch (e) {
+        console.error('Like error:', e);
+        alert('点赞失败，请重试！| Failed to like. Please try again.');
+      }
+    }
+
+    async function loadAllData() {
+      try {
+        const { data: messages, error: msgError } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(0, TOTAL_ITEMS - 1);
+
+        if (msgError) throw msgError;
+
+        allMessages = messages;
+
+        const { data: topLiked, error: topError } = await supabase
+          .from('messages')
+          .select('*')
+          .order('likes', { ascending: false })
+          .limit(10);
+
+        if (topError) throw topError;
+
+        renderTopLiked(topLiked);
+        renderPage(currentPage);
+        renderPagination();
+      } catch (e) {
+        console.error('Load data error:', e);
+        alert('加载数据失败，请刷新页面！| Failed to load data. Please refresh the page.');
+      }
+    }
+
+    function renderTopLiked(list) {
+      const container = document.getElementById('topLiked');
+      container.innerHTML = list.map((m, idx) => `
+        <div class="top-item">
+          <span class="top-rank">#${idx + 1}</span>
+          <span class="top-content">${m.content}</span>
+          <div class="top-user">${m.name} • ${m.address} • ${formatTime(m.created_at)}</div>
+        </div>
+      `).join('');
+    }
+
+    function changeSort() {
+      currentSort = document.getElementById('sortSelect').value;
+      currentPage = 1;
+      renderPage(currentPage);
+      renderPagination();
+    }
+
+    function sortMessages(messages, sortBy) {
+      if (sortBy === 'likes') {
+        return [...messages].sort((a, b) => b.likes - a.likes);
+      } else {
+        return [...messages].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      }
+    }
+
+    function renderPage(page) {
+      const sortedMessages = sortMessages(allMessages, currentSort);
+      const start = (page - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      const pageMessages = sortedMessages.slice(start, end);
+
+      const container = document.getElementById('messageList');
+      container.innerHTML = pageMessages.map(m => `
+        <div class="message-item">
+          <div class="message-user">${m.name} • ${m.address}</div>
+          <div class="message-content">${m.content}</div>
+          <div class="message-meta">
+            <span class="timestamp">${formatTime(m.created_at)}</span>
+            <div>
+              <span class="like-count">👍 ${m.likes}</span>
+              <button class="like-button" onclick="like(${m.id})">👍 点赞 | Like</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(allMessages.length / ITEMS_PER_PAGE);
+      const container = document.getElementById('pagination');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= totalPages && i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.onclick = () => {
+          currentPage = i;
+          renderPage(currentPage);
+          renderPagination();
+        };
+        container.appendChild(btn);
+      }
+    }
+
+    loadAllData();
+  </script>
+</body>
+</html>
